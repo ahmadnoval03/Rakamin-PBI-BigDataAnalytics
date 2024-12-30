@@ -1,0 +1,67 @@
+with transaksi_cte as (
+    select
+        t.transaction_id,
+        t.date,
+        t.customer_name,
+        t.rating_transaksi,
+        t.product_id,
+        t.branch_id,
+        t.discount_percentage,
+        t.price
+    from kimia_farma.kf_final_transaction t
+),
+produk_cte as (
+    select
+        p.product_id,
+        p.product_name,
+        p.price
+    from kimia_farma.kf_product p
+),
+kantor_cabang_cte as (
+    select
+        c.branch_id,
+        c.branch_name,
+        c.kota,
+        c.provinsi,
+        c.rating as branch_rating
+    from kimia_farma.kf_kantor_cabang c
+),
+analisa as (
+    select
+        t.transaction_id,
+        t.date,
+        t.customer_name,
+        t.rating_transaksi,
+        c.branch_id,
+        c.branch_name,
+        c.kota,
+        c.provinsi,
+        c.branch_rating,
+        p.product_id,
+        p.product_name,
+        p.price,
+        t.discount_percentage,
+        case
+            when t.price <= 50000 then 0.1
+            when t.price > 50000 and t.price <= 100000 then 0.15
+            when t.price > 100000 and t.price <= 300000 then 0.2
+            when t.price > 300000 and t.price <= 500000 then 0.25
+            else 0.3
+        end as persentase_gross_laba,
+        (p.price - (p.price * t.discount_percentage / 100)) as nett_sales,
+        ((p.price - (p.price * t.discount_percentage / 100)) * 
+        case
+            when p.price <= 50000 then 0.1
+            when p.price > 50000 and p.price <= 100000 then 0.15
+            when p.price > 100000 and p.price <= 300000 then 0.2
+            when p.price > 300000 and p.price <= 500000 then 0.25
+            else 0.3
+        end) as nett_profit
+    from transaksi_cte t
+    join produk_cte p
+        on t.product_id = p.product_id
+    join kantor_cabang_cte c
+        on t.branch_id = c.branch_id
+)
+select * 
+from analisa;
